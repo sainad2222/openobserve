@@ -84,6 +84,7 @@ import { useStore } from "vuex";
 import DateTime from "@/components/DateTime.vue";
 import useLogs from "@/composables/useLogs";
 import type { IDateTime } from "@/ts/interfaces";
+import searchService from "@/services/search";
 
 const defaultValue: any = () => {
   return {
@@ -175,7 +176,27 @@ export default defineComponent({
       return csv;
     };
 
-    const downloadLogs = () => {
+    const downloadLogs = async () => {
+      try {
+        await searchService.search({
+          org_identifier: store.state.selectedOrganization.identifier,
+          query: {
+            query: {
+              sql: props.queryData.query,
+              start_time: props.queryData.startTime,
+              end_time: props.queryData.endTime,
+              size: props.queryData.queryResults?.hits?.length,
+            }
+          },
+          page_type: "logs",
+        }, "download"); // This triggers audit logging!
+        
+      } catch (auditError) {
+        console.warn("Audit logging failed:", auditError);
+        // Continue with download even if audit fails
+      }
+      
+      // Original download logic (unchanged)
       const filename = "logs-data.csv";
       const data = jsonToCsv(props.queryData.queryResults.hits);
       const file = new File([data], filename, {
